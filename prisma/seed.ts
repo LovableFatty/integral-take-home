@@ -22,6 +22,7 @@ async function main() {
     data: {
       email: "patient@demo.com",
       name: "Demo Patient",
+      password: "password",
       role: "PATIENT",
       organization: "Trial Participant",
     },
@@ -31,6 +32,17 @@ async function main() {
     data: {
       email: "reviewer@demo.com",
       name: "Dr. Sarah Chen",
+      password: "password",
+      role: "REVIEWER",
+      organization: "PharmaCorp Trial Coordinator",
+    },
+  });
+
+  const reviewerUser2 = await prisma.user.create({
+    data: {
+      email: "reviewer2@demo.com",
+      name: "Dr. Ben Venethongkham",
+      password: "password",
       role: "REVIEWER",
       organization: "PharmaCorp Trial Coordinator",
     },
@@ -52,6 +64,7 @@ async function main() {
       clientPhone: "555-987-6543",
       dateOfBirth: "1978-06-22",
       ssn: "987-65-4321",
+      fullAddress: "123 Main Street, Sacramento, CA 95814",
       description:
         "Applying for Phase III cardiovascular clinical trial. History of hypertension, currently on beta blockers. Interested in participating to access new treatment options.",
       notes: "Referred by cardiologist Dr. Johnson. Patient meets initial age and diagnosis criteria.",

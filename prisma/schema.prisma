@@ -23,10 +23,20 @@ enum IntakeStatus {
   REJECTED // Application rejected or ineligible
 }
 
+// Document types for uploaded files
+enum DocumentType {
+  MEDICAL_RECORD
+  INSURANCE_CARD
+  PRESCRIPTION
+  ID
+  OTHER
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String
+  password     String
   role         Role
   organization String
   createdAt    DateTime @default(now())
@@ -50,6 +60,7 @@ model Intake {
   clientPhone String // Phone number - PII, should be redacted in initial view
   dateOfBirth String // Date of birth - PII, should be redacted in initial view
   ssn         String // Social Security Number - PII, should be redacted in initial view
+  fullAddress String // Full address - PII, should be redacted in initial view
 
   // Application details
   description String // Reason for enrollment, medical history, etc.
@@ -62,6 +73,9 @@ model Intake {
   reviewer      User?      @relation("ReviewedBy", fields: [reviewerId], references: [id])
   auditLogs     AuditLog[]
   documents     Document[] // Supporting documents uploaded by patient
+
+  @@index([status])
+  @@index([submittedById])
 }
 
 model AuditLog {
@@ -84,6 +98,7 @@ model Document {
   fileType    String // MIME type (e.g., "application/pdf", "image/jpeg")
   fileSize    Int // File size in bytes
   filePath    String // Storage path or URL
+  documentType DocumentType // Type of document (medical record, insurance card, etc.)
   description String? // Optional description of the document
   createdAt   DateTime @default(now())
 
