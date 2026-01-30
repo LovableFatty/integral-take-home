@@ -1,36 +1,27 @@
-import { Role } from "@prisma/client";
+import { Role, Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
-import { IntakeWithRelations } from "@/types/intake";
+
+const USER_SELECT = {
+  name: true,
+  email: true,
+} as const;
 
 const INTAKE_INCLUDE = {
-  submittedBy: {
-    select: {
-      id: true,
-      name: true,
-      email: true,
-    },
-  },
-  reviewer: {
-    select: {
-      id: true,
-      name: true,
-      email: true,
-    },
-  },
+  submittedBy: { select: USER_SELECT },
+  reviewer: { select: USER_SELECT },
   documents: {
     select: {
       id: true,
       fileName: true,
-      fileType: true,
-      fileSize: true,
-    },
-  },
-  _count: {
-    select: {
-      auditLogs: true,
+      documentType: true,
     },
   },
 } as const;
+
+// Type for intake with relations (matches INTAKE_INCLUDE)
+export type IntakeWithRelations = Prisma.IntakeGetPayload<{
+  include: typeof INTAKE_INCLUDE;
+}>;
 
 export async function getIntakesForUser(
   userId: string,
@@ -40,5 +31,12 @@ export async function getIntakesForUser(
     where: role === Role.PATIENT ? { submittedById: userId } : {},
     include: INTAKE_INCLUDE,
     orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getIntakeById(intakeId: string) {
+  return prisma.intake.findUnique({
+    where: { id: intakeId },
+    include: INTAKE_INCLUDE,
   });
 }

@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import StatusBadge from "./StatusBadge";
+import Dialog from "./Dialog";
+import PrivilegedViewToggle from "./PrivilegedViewToggle";
+import PersonalInformationSection from "./PersonalInformationSection";
+import ApplicationDetailsSection from "./ApplicationDetailsSection";
+import DocumentsSection from "./DocumentsSection";
+import SubmissionInformationSection from "./SubmissionInformationSection";
+import { IntakeDetail } from "@/types/intake";
+import { formatDateTime } from "@/utils/format";
 
 interface IntakeDetailDialogProps {
   intakeId: string | null;
@@ -13,64 +22,143 @@ export default function IntakeDetailDialog({
   intakeId,
   isOpen,
   onClose,
+  onStatusUpdate,
 }: IntakeDetailDialogProps) {
+  const [intake, setIntake] = useState<IntakeDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [privileged, setPrivileged] = useState(false);
+
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-
-    if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
-      document.body.style.overflow = "hidden";
+    if (isOpen && intakeId) {
+      fetchIntakeDetail();
+    } else if (!isOpen) {
+      // Reset state when dialog closes
+      setIntake(null);
+      setPrivileged(false);
+      setError("");
     }
+  }, [isOpen, intakeId]);
 
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "";
-    };
-  }, [isOpen, onClose]);
+  const fetchIntakeDetail = async () => {
+    if (!intakeId) return;
 
-  if (!isOpen || !intakeId) {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await fetch(`/api/intakes/${intakeId}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("Intake not found");
+        }
+        if (response.status === 403) {
+          throw new Error("You don't have permission to view this intake");
+        }
+        throw new Error("Failed to fetch intake details");
+      }
+      const data = await response.json();
+      setIntake(data.intake);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load intake details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = (documentId: string) => {
+    // TODO: Implement download logic for individual document
+    console.log("Download document:", documentId);
+  };
+
+  const handleDownloadAll = () => {
+    // TODO: Implement download all logic
+    console.log("Download all documents");
+  };
+
+  if (!intakeId) {
     return null;
   }
 
+  const showPrivilegedToggle = true;
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Intake Application Details"
+      subtitle={
+        intake ? `Submitted ${formatDateTime(intake.createdAt)}` : undefined
+      }
+      headerActions={
+        showPrivilegedToggle && intake ? (
+          <PrivilegedViewToggle
+            privileged={privileged}
+            onToggle={setPrivileged}
+          />
+        ) : undefined
+      }
+      footer={
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+        >
+          Close
+        </button>
+      }
     >
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Intake Details</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="Close dialog"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <div className="text-gray-600">
-            <p>Intake ID: {intakeId}</p>
-            <p className="mt-4">Detail view.</p>
-          </div>
+      {loading ? (
+        <div className="text-center py-8">
+          <p className="text-gray-600">Loading intake details...</p>
         </div>
-      </div>
-    </div>
+      ) : error ? (
+        <div className="text-center py-8">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={fetchIntakeDetail}
+            className="px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800"
+          >
+            Retry
+          </button>
+        </div>
+      ) : intake ? (
+        <div className="space-y-6">
+          {/* Status Badge */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gray-700">Status:</span>
+            <StatusBadge status={intake.status} />
+          </div>
+
+          {/* Personal Information Section */}
+          <PersonalInformationSection
+            clientName={intake.clientName}
+            clientEmail={intake.clientEmail}
+            clientPhone={intake.clientPhone}
+            dateOfBirth={intake.dateOfBirth}
+            ssn={intake.ssn}
+            fullAddress={intake.fullAddress}
+            privileged={privileged}
+          />
+
+          {/* Application Details Section */}
+          <ApplicationDetailsSection
+            description={intake.description}
+            notes={intake.notes}
+          />
+
+          {/* Documents Section */}
+          <DocumentsSection
+            documents={intake.documents}
+            onDownload={handleDownload}
+            onDownloadAll={handleDownloadAll}
+          />
+
+          {/* Submission Information */}
+          <SubmissionInformationSection
+            submittedBy={intake.submittedBy}
+            reviewer={intake.reviewer}
+          />
+        </div>
+      ) : null}
+    </Dialog>
   );
 }

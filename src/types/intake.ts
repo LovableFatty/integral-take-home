@@ -1,39 +1,23 @@
-import { Prisma } from "@prisma/client";
+export type { IntakeWithRelations } from "@/lib/intake-queries";
 
-// Prisma type for Intake with relations
-export type IntakeWithRelations = Prisma.IntakeGetPayload<{
-  include: {
-    submittedBy: {
-      select: {
-        id: true;
-        name: true;
-        email: true;
-      };
-    };
-    reviewer: {
-      select: {
-        id: true;
-        name: true;
-        email: true;
-      };
-    };
-    documents: {
-      select: {
-        id: true;
-        fileName: true;
-        fileType: true;
-        fileSize: true;
-      };
-    };
-    _count: {
-      select: {
-        auditLogs: true;
-      };
-    };
-  };
-}>;
+// Document type (matches what's returned from INTAKE_INCLUDE)
+export interface Document {
+  id: string;
+  fileName: string;
+  documentType: string;
+}
 
-// API Response types
+
+export type IntakeDetail = Omit<IntakeWithRelations, "createdAt" | "updatedAt"> & {
+  createdAt: string;
+  updatedAt: string;
+};
+
+// API Response type for GET /api/intakes/[id]
+export interface GetIntakeResponse {
+  intake: IntakeDetail;
+}
+
 export interface GetIntakesResponse {
   intakes: IntakeWithRelations[];
 }
