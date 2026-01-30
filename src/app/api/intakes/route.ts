@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
+import { existsSync } from "fs";
 
 export async function GET() {
   // TODO: Implement fetching intakes
@@ -101,6 +104,95 @@ export async function POST(request: NextRequest) {
       data: intakeDataInput,
     });
 
+    // Handle file uploads
+    const files = formData.getAll("files") as File[];
+    const fileTypes = formData.getAll("fileTypes") as string[];
+    const uploadedDocuments = [];
+
+    // File validation constants
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const ALLOWED_FILE_TYPES = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    const ALLOWED_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"];
+
+    if (files.length > 0) {
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = join(process.cwd(), "uploads", intake.id);
+      if (!existsSync(uploadsDir)) {
+        await mkdir(uploadsDir, { recursive: true });
+      }
+
+      // Process each file
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const documentType = fileTypes[i] || "OTHER";
+
+        // Validate file size
+        if (file.size > MAX_FILE_SIZE) {
+          return NextResponse.json(
+            { error: `File "${file.name}" exceeds maximum size of 10MB` },
+            { status: 400 }
+          );
+        }
+
+        // Validate file type
+        const fileExtension = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+        const isValidType = 
+          ALLOWED_FILE_TYPES.includes(file.type) || 
+          ALLOWED_EXTENSIONS.includes(fileExtension);
+
+        if (!isValidType) {
+          return NextResponse.json(
+            { error: `File "${file.name}" has an invalid file type. Allowed types: PDF, JPG, PNG, DOC, DOCX` },
+            { status: 400 }
+          );
+        }
+
+        // Sanitize filename to prevent path traversal
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+        
+        // Generate unique filename with timestamp
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_${sanitizedName}`;
+        const filePath = join(uploadsDir, fileName);
+
+        // Convert file to buffer and write to disk
+        const bytes = await file.arrayBuffer();
+        const buffer = new Uint8Array(bytes);
+        await writeFile(filePath, buffer);
+
+        // Validate documentType is a valid enum value
+        const validDocumentType = 
+          documentType === "MEDICAL_RECORD" ||
+          documentType === "INSURANCE_CARD" ||
+          documentType === "PRESCRIPTION" ||
+          documentType === "ID" ||
+          documentType === "OTHER"
+            ? documentType
+            : "OTHER";
+
+        // Create document record in database
+        const document = await prisma.document.create({
+          data: {
+            fileName: file.name,
+            fileType: file.type || "application/octet-stream",
+            fileSize: file.size,
+            filePath: `/uploads/${intake.id}/${fileName}`,
+            documentType: validDocumentType as any,
+            intakeId: intake.id,
+          },
+        });
+
+        uploadedDocuments.push(document);
+      }
+    }
+
     // Create audit log entry
     const auditLogData: {
       action: string;
@@ -111,6 +203,7 @@ export async function POST(request: NextRequest) {
       action: "CREATED",
       details: JSON.stringify({
         status: "PENDING",
+        documentCount: uploadedDocuments.length,
       }),
       userId: user.id,
       intakeId: intake.id,
@@ -127,6 +220,7 @@ export async function POST(request: NextRequest) {
         status: intake.status,
         createdAt: intake.createdAt,
       },
+      documentsUploaded: uploadedDocuments.length,
     });
   } catch (error) {
     console.error("Intake creation error:", error);
