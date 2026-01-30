@@ -1,4 +1,3 @@
-import React from "react";
 import { AuditLog } from "@/types/audit-log";
 import AuditLogTableRow from "./AuditLogTableRow";
 

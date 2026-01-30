@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import Card from "./Card";
 import { useAuditLogs } from "@/hooks/useAuditLogs";
 import AuditTrailTable from "./audit-trail/AuditTrailTable";
