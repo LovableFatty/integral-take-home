@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import StatusBadge from "./StatusBadge";
+import StatusHeader from "./StatusHeader";
 import Dialog from "./Dialog";
 import PrivilegedViewToggle from "./PrivilegedViewToggle";
 import PersonalInformationSection from "./PersonalInformationSection";
@@ -10,6 +10,8 @@ import DocumentsSection from "./DocumentsSection";
 import SubmissionInformationSection from "./SubmissionInformationSection";
 import { IntakeDetail } from "@/types/intake";
 import { formatDateTime } from "@/utils/format";
+import { IntakeStatus } from "@prisma/client";
+import { getErrorMessage } from "@/utils/errors";
 
 interface IntakeDetailDialogProps {
   intakeId: string | null;
@@ -28,6 +30,8 @@ export default function IntakeDetailDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [privileged, setPrivileged] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusUpdateError, setStatusUpdateError] = useState("");
 
   useEffect(() => {
     if (isOpen && intakeId) {
@@ -37,6 +41,7 @@ export default function IntakeDetailDialog({
       setIntake(null);
       setPrivileged(false);
       setError("");
+      setStatusUpdateError("");
     }
   }, [isOpen, intakeId]);
 
@@ -59,7 +64,7 @@ export default function IntakeDetailDialog({
       const data = await response.json();
       setIntake(data.intake);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load intake details");
+      setError(getErrorMessage(err, "Failed to load intake details"));
     } finally {
       setLoading(false);
     }
@@ -74,6 +79,46 @@ export default function IntakeDetailDialog({
     // TODO: Implement download all logic
     console.log("Download all documents");
   };
+
+  const handleStatusUpdate = async (newStatus: IntakeStatus) => {
+    if (!intakeId || !intake) return;
+
+    try {
+      setUpdatingStatus(true);
+      setStatusUpdateError("");
+
+      const response = await fetch(`/api/intakes/${intakeId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          notes: intake.notes,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to update status");
+      }
+
+      const data = await response.json();
+      
+      // Update the intake in local state
+      setIntake(data.intake);
+      
+      // Notify parent to refresh the queue list
+      if (onStatusUpdate) {
+        onStatusUpdate();
+      }
+    } catch (err) {
+      setStatusUpdateError(getErrorMessage(err, "Failed to update status"));
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
 
   if (!intakeId) {
     return null;
@@ -122,11 +167,13 @@ export default function IntakeDetailDialog({
         </div>
       ) : intake ? (
         <div className="space-y-6">
-          {/* Status Badge */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-700">Status:</span>
-            <StatusBadge status={intake.status} />
-          </div>
+          {/* Status Badge and Update Controls */}
+          <StatusHeader
+            status={intake.status}
+            onStatusUpdate={handleStatusUpdate}
+            updatingStatus={updatingStatus}
+            statusUpdateError={statusUpdateError}
+          />
 
           {/* Personal Information Section */}
           <PersonalInformationSection

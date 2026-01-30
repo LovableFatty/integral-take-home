@@ -6,7 +6,7 @@ const USER_SELECT = {
   email: true,
 } as const;
 
-const INTAKE_INCLUDE = {
+export const INTAKE_INCLUDE = {
   submittedBy: { select: USER_SELECT },
   reviewer: { select: USER_SELECT },
   documents: {
@@ -39,4 +39,17 @@ export async function getIntakeById(intakeId: string) {
     where: { id: intakeId },
     include: INTAKE_INCLUDE,
   });
+}
+
+/**
+ * Serialize intake dates for JSON response
+ */
+export function serializeIntakeDates<T extends { createdAt: Date; updatedAt: Date }>(
+  intake: T
+): Omit<T, "createdAt" | "updatedAt"> & { createdAt: string; updatedAt: string } {
+  return {
+    ...intake,
+    createdAt: intake.createdAt.toISOString(),
+    updatedAt: intake.updatedAt.toISOString(),
+  };
 }

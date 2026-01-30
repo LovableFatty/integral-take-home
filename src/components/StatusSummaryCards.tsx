@@ -1,6 +1,7 @@
 "use client";
 
 import { IntakeStatus } from "@prisma/client";
+import { STATUS_CONFIG, getStatusLabel } from "@/utils/status";
 
 interface StatusSummaryCardsProps {
   intakes: Array<{ status: IntakeStatus }>;
@@ -17,7 +18,7 @@ export default function StatusSummaryCards({ intakes }: StatusSummaryCardsProps)
   const cards = [
     {
       status: "PENDING" as IntakeStatus,
-      label: "Pending",
+      label: getStatusLabel("PENDING"),
       count: counts.PENDING,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,13 +30,11 @@ export default function StatusSummaryCards({ intakes }: StatusSummaryCardsProps)
           />
         </svg>
       ),
-      bgColor: "bg-yellow-50",
-      iconColor: "text-yellow-600",
-      textColor: "text-yellow-900",
+      ...STATUS_CONFIG.PENDING.summary,
     },
     {
       status: "IN_REVIEW" as IntakeStatus,
-      label: "In Review",
+      label: getStatusLabel("IN_REVIEW"),
       count: counts.IN_REVIEW,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -47,13 +46,11 @@ export default function StatusSummaryCards({ intakes }: StatusSummaryCardsProps)
           />
         </svg>
       ),
-      bgColor: "bg-blue-50",
-      iconColor: "text-blue-600",
-      textColor: "text-blue-900",
+      ...STATUS_CONFIG.IN_REVIEW.summary,
     },
     {
       status: "APPROVED" as IntakeStatus,
-      label: "Approved",
+      label: getStatusLabel("APPROVED"),
       count: counts.APPROVED,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,13 +62,11 @@ export default function StatusSummaryCards({ intakes }: StatusSummaryCardsProps)
           />
         </svg>
       ),
-      bgColor: "bg-green-50",
-      iconColor: "text-green-600",
-      textColor: "text-green-900",
+      ...STATUS_CONFIG.APPROVED.summary,
     },
     {
       status: "REJECTED" as IntakeStatus,
-      label: "Rejected",
+      label: getStatusLabel("REJECTED"),
       count: counts.REJECTED,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,9 +78,7 @@ export default function StatusSummaryCards({ intakes }: StatusSummaryCardsProps)
           />
         </svg>
       ),
-      bgColor: "bg-red-50",
-      iconColor: "text-red-600",
-      textColor: "text-red-900",
+      ...STATUS_CONFIG.REJECTED.summary,
     },
   ];
 
