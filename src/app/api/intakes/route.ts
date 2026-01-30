@@ -1,14 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { getIntakesForUser } from "@/lib/intake-queries";
+import { GetIntakesResponse } from "@/types/intake";
+
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 
 export async function GET() {
-  // TODO: Implement fetching intakes
-  
-  return NextResponse.json({ message: "TODO: Implement GET /api/intakes" });
+  try {
+    const user = await requireAuth();
+    const intakes = await getIntakesForUser(user.id, user.role);
+    return NextResponse.json<GetIntakesResponse>({ intakes });
+  } catch (error) {
+    console.error("Get intakes error:", error);
+    
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: "Failed to fetch intakes" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
