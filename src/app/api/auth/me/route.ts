@@ -23,7 +23,6 @@ export async function GET() {
     });
 
     if (!user) {
-      // Invalid session, clear cookie
       cookieStore.delete("session");
       return NextResponse.json({ user: null }, { status: 200 });
     }

@@ -23,10 +23,8 @@ export default function FileUploadSection({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      // Append new files to existing ones instead of replacing
       const combined = [...files];
       newFiles.forEach((newFile) => {
-        // Check if file already exists (by name, size, and lastModified)
         const exists = files.some(
           (existingFile) =>
             existingFile.name === newFile.name &&
@@ -38,7 +36,6 @@ export default function FileUploadSection({
         }
       });
 
-      // Initialize document types for newly added files
       const updatedTypes = { ...fileTypes };
       combined.forEach((file, index) => {
         const key = getFileKey(file, index);

@@ -32,18 +32,36 @@ export default function IntakeDetailDialog({
   const [privileged, setPrivileged] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState("");
+  const [hasLoggedPrivilegedView, setHasLoggedPrivilegedView] = useState(false);
 
   useEffect(() => {
     if (isOpen && intakeId) {
       fetchIntakeDetail();
     } else if (!isOpen) {
-      // Reset state when dialog closes
       setIntake(null);
       setPrivileged(false);
       setError("");
       setStatusUpdateError("");
+      setHasLoggedPrivilegedView(false);
     }
   }, [isOpen, intakeId]);
+
+  // Log privileged view access when toggled ON (only once per dialog session)
+  useEffect(() => {
+    if (privileged && intakeId && intake && !hasLoggedPrivilegedView) {
+      const logPrivilegedView = async () => {
+        try {
+          await fetch(`/api/intakes/${intakeId}/view`, {
+            method: "POST",
+          });
+          setHasLoggedPrivilegedView(true);
+        } catch (err) {
+          console.error("Failed to log privileged view access:", err);
+        }
+      };
+      logPrivilegedView();
+    }
+  }, [privileged, intakeId, intake, hasLoggedPrivilegedView]);
 
   const fetchIntakeDetail = async () => {
     if (!intakeId) return;
@@ -105,10 +123,8 @@ export default function IntakeDetailDialog({
 
       const data = await response.json();
       
-      // Update the intake in local state
       setIntake(data.intake);
       
-      // Notify parent to refresh the queue list
       if (onStatusUpdate) {
         onStatusUpdate();
       }

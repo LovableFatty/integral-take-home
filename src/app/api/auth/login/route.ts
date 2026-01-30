@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Compare passwords
     if (user.password !== password) {
       return NextResponse.json(
         { error: "Invalid email or password" },
@@ -32,7 +31,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Set session cookie
     const cookieStore = await cookies();
     cookieStore.set("session", user.id, {
       httpOnly: true,

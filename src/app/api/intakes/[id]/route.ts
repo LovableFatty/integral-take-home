@@ -24,7 +24,6 @@ export async function GET(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Check authorization: PATIENT can only see their own, REVIEWER can see all
     if (user.role === Role.PATIENT && intake.submittedById !== user.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -32,7 +31,6 @@ export async function GET(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Convert Date objects to strings for JSON serialization
     const serializedIntake = serializeIntakeDates(intake) as IntakeDetail;
 
     return NextResponse.json<GetIntakeResponse>({ intake: serializedIntake });
@@ -55,13 +53,11 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
-    // Only REVIEWER can update status
     const user = await requireRole([Role.REVIEWER]);
     const { id: intakeId } = await params;
     const body = await request.json();
     const { status, notes } = body;
 
-    // Validate status
     if (!status || !Object.values(IntakeStatus).includes(status)) {
       return NextResponse.json(
         { error: "Invalid status" },
@@ -69,7 +65,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Get current intake
     const currentIntake = await prisma.intake.findUnique({
       where: { id: intakeId },
     });
@@ -81,7 +76,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Update intake
     const updatedIntake = await prisma.intake.update({
       where: { id: intakeId },
       data: {
@@ -92,7 +86,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       include: INTAKE_INCLUDE,
     });
 
-    // Create audit log entry for status change
     await prisma.auditLog.create({
       data: {
         action: "STATUS_CHANGED",
@@ -105,7 +98,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       },
     });
 
-    // Convert Date objects to strings for JSON serialization
     const serializedIntake = serializeIntakeDates(updatedIntake) as IntakeDetail;
 
     return NextResponse.json<GetIntakeResponse>({ intake: serializedIntake });

@@ -1,7 +1,3 @@
-/**
- * Document-related utility functions
- */
-
 export function getDocumentTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     MEDICAL_RECORD: "Medical Record",

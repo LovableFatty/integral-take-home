@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { validateIntakeForm, formatSSN, type IntakeFormData } from "@/utils/formValidation";
+import { validateIntakeForm, type IntakeFormData } from "@/utils/validation";
+import { formatSSN } from "@/utils/format";
 import IntakeSuccess from "./IntakeSuccess";
 import FileUploadSection, { getFileKey } from "./FileUploadSection";
 
@@ -63,7 +64,6 @@ export default function IntakeForm({ userId }: IntakeFormProps) {
     e.preventDefault();
     setError("");
 
-    // Client-side validation
     const validationError = validateIntakeForm(formData);
     if (validationError) {
       setError(validationError);
@@ -76,7 +76,6 @@ export default function IntakeForm({ userId }: IntakeFormProps) {
       const formDataToSend = new FormData();
       formDataToSend.append("data", JSON.stringify({ ...formData, userId }));
 
-      // Append files with their types
       files.forEach((file, index) => {
         formDataToSend.append("files", file);
         const fileKey = getFileKey(file, index);

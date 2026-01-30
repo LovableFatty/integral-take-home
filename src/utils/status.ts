@@ -83,9 +83,6 @@ export const STATUS_CONFIG = {
   },
 } as const;
 
-/**
- * Get the next available status options based on current status
- */
 export function getNextStatusOptions(currentStatus: IntakeStatus): IntakeStatus[] {
   switch (currentStatus) {
     case "PENDING":
@@ -101,16 +98,10 @@ export function getNextStatusOptions(currentStatus: IntakeStatus): IntakeStatus[
   }
 }
 
-/**
- * Get status label
- */
 export function getStatusLabel(status: IntakeStatus): string {
   return STATUS_CONFIG[status].label;
 }
 
-/**
- * Get status button label
- */
 export function getStatusButtonLabel(status: IntakeStatus): string {
   return STATUS_CONFIG[status].button.label;
 }

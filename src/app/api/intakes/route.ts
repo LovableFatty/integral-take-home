@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { getIntakesForUser } from "@/lib/intake-queries";
 import { GetIntakesResponse } from "@/types/intake";
+import { isValidEmail } from "@/utils/validation";
 
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
@@ -35,7 +36,6 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
 
-    // Parse FormData
     const formData = await request.formData();
     const dataJson = formData.get("data") as string;
     
@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
       notes?: string;
     };
 
-    // Verify the userId matches the authenticated user
     if (intakeData.userId !== user.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -66,7 +65,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate required fields
     const {
       clientName,
       clientEmail,
@@ -78,7 +76,6 @@ export async function POST(request: NextRequest) {
       notes,
     } = intakeData;
 
-    // Validate required fields
     if (!clientName || !clientEmail || !clientPhone || !dateOfBirth || !ssn || !fullAddress || !description) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -86,16 +83,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(clientEmail)) {
+    if (!isValidEmail(clientEmail)) {
       return NextResponse.json(
         { error: "Invalid email format" },
         { status: 400 }
       );
     }
 
-    // Create intake record with PENDING status
     const intakeDataInput: {
       clientName: string;
       clientEmail: string;
@@ -124,13 +118,11 @@ export async function POST(request: NextRequest) {
       data: intakeDataInput,
     });
 
-    // Handle file uploads
     const files = formData.getAll("files") as File[];
     const fileTypes = formData.getAll("fileTypes") as string[];
     const uploadedDocuments = [];
 
-    // File validation constants
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
     const ALLOWED_FILE_TYPES = [
       "application/pdf",
       "image/jpeg",
@@ -142,18 +134,15 @@ export async function POST(request: NextRequest) {
     const ALLOWED_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"];
 
     if (files.length > 0) {
-      // Create uploads directory if it doesn't exist
       const uploadsDir = join(process.cwd(), "uploads", intake.id);
       if (!existsSync(uploadsDir)) {
         await mkdir(uploadsDir, { recursive: true });
       }
 
-      // Process each file
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const documentType = fileTypes[i] || "OTHER";
 
-        // Validate file size
         if (file.size > MAX_FILE_SIZE) {
           return NextResponse.json(
             { error: `File "${file.name}" exceeds maximum size of 10MB` },
@@ -161,7 +150,6 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Validate file type
         const fileExtension = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
         const isValidType = 
           ALLOWED_FILE_TYPES.includes(file.type) || 
@@ -174,20 +162,15 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Sanitize filename to prevent path traversal
         const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-        
-        // Generate unique filename with timestamp
         const timestamp = Date.now();
         const fileName = `${timestamp}_${sanitizedName}`;
         const filePath = join(uploadsDir, fileName);
 
-        // Convert file to buffer and write to disk
         const bytes = await file.arrayBuffer();
         const buffer = new Uint8Array(bytes);
         await writeFile(filePath, buffer);
 
-        // Validate documentType is a valid enum value
         const validDocumentType = 
           documentType === "MEDICAL_RECORD" ||
           documentType === "INSURANCE_CARD" ||
@@ -213,7 +196,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create audit log entry
     const auditLogData: {
       action: string;
       details: string | null;

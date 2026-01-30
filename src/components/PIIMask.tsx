@@ -19,7 +19,6 @@ export default function PIIMask({
     return <span>{value}</span>;
   }
 
-  // Apply masking based on type
   const maskedValue = maskPII(value, type, showMonthDay);
 
   return <span className="font-mono">{maskedValue}</span>;
